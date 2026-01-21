@@ -64,9 +64,9 @@ export const INITIAL_CLASSES = [
 
 export const POKEMON_COUNT = 500;
 export const AUDIO_URLS = {
-  WIN: 'https://cdn.pixabay.com/audio/2022/03/10/audio_f53096b02a.mp3', // Level up magic chime
-  LOSE: 'https://assets.mixkit.co/active_storage/sfx/265/265-preview.mp3', // Downward slide thud for failure
-  CLAP: 'https://cdn.pixabay.com/audio/2021/11/24/audio_970636257a.mp3', // Audience clapping for bulk update
-  ROLL: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3', // Rapid ticking sound (du-du-du)
-  PICK: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3' // Fanfare for final pick
+  WIN: 'https://assets.mixkit.co/active_storage/sfx/2017/2017-preview.mp3', // Pleasant happy chime
+  LOSE: 'https://assets.mixkit.co/active_storage/sfx/256/256-preview.mp3', // Sad downward thud
+  CLAP: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3', // Strong applause
+  ROLL: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3', // Ticking sound
+  PICK: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3' // Selection applause
 };

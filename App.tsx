@@ -125,6 +125,15 @@ const App: React.FC = () => {
     saveToLocal(newClasses);
   };
 
+  const unlockAudio = () => {
+    (Object.values(audioRefs.current) as HTMLAudioElement[]).forEach(audio => {
+      audio.play().then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+      }).catch(() => {});
+    });
+  };
+
   const playSound = (type: keyof typeof AUDIO_URLS) => {
     const audio = audioRefs.current[type];
     if (audio) {
@@ -136,6 +145,7 @@ const App: React.FC = () => {
   };
 
   const handleApplyAction = (action: Action | { points: number, text: string }, isPositive: boolean) => {
+    unlockAudio();
     const idsToUpdate = isMultiSelectMode ? Array.from(selectedIds) : (selectedStudent ? [selectedStudent.id] : []);
     if (idsToUpdate.length === 0) return;
     
@@ -161,14 +171,14 @@ const App: React.FC = () => {
       finalPoints: idsToUpdate.length === 1 ? (firstStudent ? firstStudent.points + changeValue : undefined) : undefined
     });
 
-    // Determine sound: bulk update clapping or individual effect
+    // Bulk positive -> CLAP, single positive -> WIN, negative -> LOSE
     if (idsToUpdate.length > 1 && isPositive) {
       playSound('CLAP');
     } else {
       playSound(isPositive ? 'WIN' : 'LOSE');
     }
     
-    // Exactly 1.5s as requested
+    // Exactly 1.5s splash duration
     setTimeout(() => setSplashData(null), 1500);
     setIsActionModalOpen(false);
     if (isMultiSelectMode) {
@@ -206,14 +216,7 @@ const App: React.FC = () => {
 
   const startRolling = () => {
     if (!activeClass || activeClass.students.length === 0) return;
-    
-    // Unlock all audio elements on first user gesture to prevent browser blockages
-    (Object.values(audioRefs.current) as HTMLAudioElement[]).forEach(audio => {
-      audio.play().then(() => {
-        audio.pause();
-        audio.currentTime = 0;
-      }).catch(() => {});
-    });
+    unlockAudio();
 
     const pool = activeClass.students.filter(s => !drawnIds.has(s.id));
     const effectivePool = pool.length > 0 ? pool : activeClass.students;
@@ -221,7 +224,7 @@ const App: React.FC = () => {
     setIsRolling(true);
     setRolledStudent(null);
 
-    // Exactly 1.5 seconds = 1500ms (100ms interval * 15 steps)
+    // EXACTLY 1.5 seconds = 1500ms (100ms interval * 15 steps)
     let count = 0;
     const interval = setInterval(() => {
       const random = effectivePool[Math.floor(Math.random() * effectivePool.length)];
@@ -233,14 +236,13 @@ const App: React.FC = () => {
         clearInterval(interval);
         setTimeout(() => {
           setIsRolling(false);
-          playSound('PICK');
+          playSound('CLAP'); // Applaud on selection
           setDrawnIds(prev => {
             const next = new Set(prev);
             next.add(random.id);
             if (next.size >= activeClass.students.length) return new Set([random.id]); 
             return next;
           });
-          // Auto-open action panel for the lucky student
           setSelectedStudent(random);
           setIsActionModalOpen(true);
         }, 300);
@@ -486,7 +488,6 @@ const App: React.FC = () => {
       {/* Splash Animation (Congratulation / Effort) */}
       {splashData && (
         <div className={`fixed inset-0 flex items-center justify-center z-[120] animate-in fade-in duration-300 ${splashData.isPositive ? 'bg-pink-400/95' : 'bg-red-300/95'}`}>
-          {/* Internal Fireworks for Positive Splash */}
           {splashData.isPositive && (
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
                 <div className="firework" style={{ left: '15%', top: '25%', color: '#fff', animationDelay: '0s' }}></div>
@@ -532,11 +533,6 @@ const App: React.FC = () => {
                 <div className="flex flex-col items-center bg-pink-50 px-10 py-5 rounded-full shadow-inner border-2 border-pink-200">
                   <span className="text-pink-400 text-sm font-bold uppercase tracking-widest mb-1">當前最新分數是</span>
                   <span className="text-pink-700 text-5xl font-heading tracking-tighter">{splashData.finalPoints}</span>
-                </div>
-            )}
-            {splashData.count > 1 && (
-                <div className="bg-purple-100 px-10 py-4 rounded-full text-purple-700 text-xl font-bold shadow-inner uppercase">
-                   已更新 {splashData.count} 位學生
                 </div>
             )}
           </div>
