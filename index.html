@@ -1,0 +1,89 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Miss Iong's Class</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Quicksand', sans-serif;
+            overflow-x: hidden;
+            background-color: #fdf2f8; /* Soft pink background */
+        }
+        .font-heading {
+            font-family: 'Fredoka One', cursive;
+        }
+        @keyframes firework {
+            0% { transform: translate(-50%, 60vh); width: 0.5vmin; opacity: 1; }
+            50% { width: 0.5vmin; opacity: 1; }
+            100% { width: 45vmin; opacity: 0; }
+        }
+        .firework,
+        .firework::before,
+        .firework::after {
+            --top: 60vh;
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 0.5vmin;
+            aspect-ratio: 1;
+            background: 
+                radial-gradient(circle, #ff0 0.2vmin, #0000 0) 50% 00%,
+                radial-gradient(circle, #ff0 0.3vmin, #0000 0) 00% 50%,
+                radial-gradient(circle, #ff0 0.5vmin, #0000 0) 50% 99%,
+                radial-gradient(circle, #ff0 0.2vmin, #0000 0) 99% 50%,
+                radial-gradient(circle, #ff0 0.3vmin, #0000 0) 80% 90%,
+                radial-gradient(circle, #ff0 0.5vmin, #0000 0) 95% 90%,
+                radial-gradient(circle, #ff0 0.5vmin, #0000 0) 10% 90%,
+                radial-gradient(circle, #ff0 0.2vmin, #0000 0) 10% 10%,
+                radial-gradient(circle, #ff0 0.2vmin, #0000 0) 80% 10%;
+            background-size: 0.5vmin 0.5vmin;
+            background-repeat: no-repeat;
+            animation: firework 2s infinite;
+        }
+        .firework::before { transform: translate(-50%, -50%) rotate(25deg) !important; }
+        .firework::after { transform: translate(-50%, -50%) rotate(-37deg) !important; }
+        
+        .firework-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .candy-gradient {
+            background: linear-gradient(135deg, #fbcfe8 0%, #e9d5ff 100%);
+        }
+
+        .shake {
+            animation: shake 0.5s ease-in-out infinite;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>
