@@ -31,11 +31,9 @@ const App: React.FC = () => {
   const [rolledStudent, setRolledStudent] = useState<Student | null>(null);
   const [drawnIds, setDrawnIds] = useState<Set<string>>(new Set());
 
-  // Refs for audio to ensure they are pre-loaded and shared
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
 
   useEffect(() => {
-    // Pre-create and preload audio elements
     Object.entries(AUDIO_URLS).forEach(([key, url]) => {
       const audio = new Audio(url);
       audio.preload = 'auto';
@@ -171,7 +169,6 @@ const App: React.FC = () => {
       finalPoints: idsToUpdate.length === 1 ? (firstStudent ? firstStudent.points + changeValue : undefined) : undefined
     });
 
-    // Bulk positive -> CLAP, single positive -> WIN, negative -> LOSE
     if (idsToUpdate.length > 1 && isPositive) {
       playSound('CLAP');
     } else {
@@ -224,19 +221,20 @@ const App: React.FC = () => {
     setIsRolling(true);
     setRolledStudent(null);
 
-    // EXACTLY 1.5 seconds = 1500ms (100ms interval * 15 steps)
+    // EXACTLY 2.0 seconds = 2000ms (100ms interval * 20 steps)
     let count = 0;
+    const maxSteps = 20; 
     const interval = setInterval(() => {
       const random = effectivePool[Math.floor(Math.random() * effectivePool.length)];
       setRolledStudent(random);
       playSound('ROLL');
       
       count++;
-      if (count >= 15) {
+      if (count >= maxSteps) {
         clearInterval(interval);
         setTimeout(() => {
           setIsRolling(false);
-          playSound('CLAP'); // Applaud on selection
+          playSound('CLAP'); 
           setDrawnIds(prev => {
             const next = new Set(prev);
             next.add(random.id);
@@ -408,50 +406,56 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Action Modal */}
+      {/* Action Modal - Tightened layout */}
       {isActionModalOpen && (selectedStudent || isMultiSelectMode) && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-4xl rounded-[40px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="p-8 candy-gradient flex flex-col md:flex-row items-center gap-6 relative">
-              <button onClick={() => setIsActionModalOpen(false)} className="absolute top-6 right-6 text-pink-600 text-2xl hover:scale-110 transition"><i className="fas fa-times"></i></button>
+            <div className="px-6 py-4 candy-gradient flex flex-col md:flex-row items-center gap-4 relative">
+              <button onClick={() => setIsActionModalOpen(false)} className="absolute top-4 right-6 text-pink-600 text-2xl hover:scale-110 transition"><i className="fas fa-times"></i></button>
               {isMultiSelectMode ? (
-                <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center border-4 border-purple-400 shadow-md">
-                   <i className="fas fa-users text-purple-400 text-5xl"></i>
+                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center border-4 border-purple-400 shadow-md">
+                   <i className="fas fa-users text-purple-400 text-3xl"></i>
                 </div>
               ) : (
-                <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${selectedStudent?.pokemonId}.png`} alt="pk" className="w-32 h-32 bg-white rounded-full p-2 border-4 border-pink-400 shadow-md" />
+                <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${selectedStudent?.pokemonId}.png`} alt="pk" className="w-20 h-20 bg-white rounded-full p-2 border-4 border-pink-400 shadow-md" />
               )}
               <div className="text-center md:text-left flex-1">
-                <h2 className="text-3xl font-heading text-pink-700 uppercase">{isMultiSelectMode ? `批量更新 (${selectedIds.size})` : selectedStudent?.name}</h2>
-                {!isMultiSelectMode && <p className="text-pink-600 font-bold text-lg">學號: #{selectedStudent?.id} • 當前分數: {selectedStudent?.points}</p>}
-                <div className="mt-4 flex items-center gap-3 bg-white/50 p-3 rounded-2xl border-2 border-pink-200">
-                  <label className="font-bold text-pink-700 text-sm whitespace-nowrap uppercase">手動輸入:</label>
+                <h2 className="text-2xl font-heading text-pink-700 uppercase leading-tight">{isMultiSelectMode ? `批量更新 (${selectedIds.size})` : selectedStudent?.name}</h2>
+                {!isMultiSelectMode && <p className="text-pink-600 font-bold text-sm">學號: #{selectedStudent?.id} • 當前分數: {selectedStudent?.points}</p>}
+                <div className="mt-2 flex items-center gap-2 bg-white/50 p-2 rounded-xl border border-pink-200">
+                  <label className="font-bold text-pink-700 text-xs whitespace-nowrap uppercase">手動輸入:</label>
                   <input 
                     id="manual-points" 
                     type="number" 
-                    placeholder="輸入分數..." 
+                    placeholder="..." 
                     onKeyDown={(e) => { if (e.key === 'Enter') handleManualApply(); }}
-                    className="w-full bg-white px-3 py-1 rounded-lg border-2 border-pink-300 focus:outline-none focus:ring-2 focus:ring-pink-400" 
+                    className="w-20 bg-white px-2 py-1 rounded border border-pink-300 focus:outline-none focus:ring-1 focus:ring-pink-400 text-sm" 
                   />
-                  <button onClick={handleManualApply} className="bg-pink-500 text-white px-4 py-1 rounded-lg font-bold hover:bg-pink-600 transition uppercase">應用</button>
+                  <button onClick={handleManualApply} className="bg-pink-500 text-white px-3 py-1 rounded font-bold hover:bg-pink-600 transition uppercase text-xs">應用</button>
                 </div>
               </div>
             </div>
-            <div className="grid md:grid-cols-2 gap-8 p-8 max-h-[60vh] overflow-y-auto">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-green-600 font-heading text-xl mb-4 border-b-4 border-green-100 pb-2 uppercase">⭐ 加分 / POSITIVE</div>
+            <div className="grid md:grid-cols-2 gap-4 p-6 max-h-[70vh] overflow-y-auto">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-green-600 font-heading text-lg mb-2 border-b-2 border-green-100 pb-1 uppercase">⭐ 加分</div>
                 {POSITIVE_ACTIONS.map((act, idx) => (
-                  <button key={idx} onClick={() => handleApplyAction(act, true)} className="w-full group bg-green-50 hover:bg-green-500 hover:text-white p-4 rounded-2xl transition-all text-left flex items-center justify-between border-2 border-transparent hover:border-green-300 shadow-sm">
-                    <div><div className="font-bold text-gray-800 group-hover:text-white">{act.textZh}</div><div className="text-xs text-gray-500 group-hover:text-green-100">{act.textEn}</div></div>
+                  <button key={idx} onClick={() => handleApplyAction(act, true)} className="w-full group bg-green-50 hover:bg-green-500 hover:text-white p-3 rounded-xl transition-all text-left flex items-center justify-between border border-transparent hover:border-green-300 shadow-sm">
+                    <div className="flex flex-col">
+                      <div className="font-bold text-gray-800 group-hover:text-white text-sm">{act.textZh}</div>
+                      <div className="text-[10px] text-gray-500 group-hover:text-green-100">{act.textEn}</div>
+                    </div>
                     <span className="font-heading text-lg text-green-500 group-hover:text-white">+{act.points}</span>
                   </button>
                 ))}
               </div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-red-600 font-heading text-xl mb-4 border-b-4 border-red-100 pb-2 uppercase">⚠️ 減分 / NEGATIVE</div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-red-600 font-heading text-lg mb-2 border-b-2 border-red-100 pb-1 uppercase">⚠️ 減分</div>
                 {NEGATIVE_ACTIONS.map((act, idx) => (
-                  <button key={idx} onClick={() => handleApplyAction(act, false)} className="w-full group bg-red-50 hover:bg-red-500 hover:text-white p-4 rounded-2xl transition-all text-left flex items-center justify-between border-2 border-transparent hover:border-red-300 shadow-sm">
-                    <div><div className="font-bold text-gray-800 group-hover:text-white">{act.textZh}</div><div className="text-xs text-gray-500 group-hover:text-red-100">{act.textEn}</div></div>
+                  <button key={idx} onClick={() => handleApplyAction(act, false)} className="w-full group bg-red-50 hover:bg-red-500 hover:text-white p-3 rounded-xl transition-all text-left flex items-center justify-between border border-transparent hover:border-red-300 shadow-sm">
+                    <div className="flex flex-col">
+                      <div className="font-bold text-gray-800 group-hover:text-white text-sm">{act.textZh}</div>
+                      <div className="text-[10px] text-gray-400 group-hover:text-red-100">{act.textEn}</div>
+                    </div>
                     <span className="font-heading text-lg text-red-500 group-hover:text-white">{act.points}</span>
                   </button>
                 ))}
@@ -485,7 +489,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Splash Animation (Congratulation / Effort) */}
+      {/* Splash Animation - 1.5s as requested */}
       {splashData && (
         <div className={`fixed inset-0 flex items-center justify-center z-[120] animate-in fade-in duration-300 ${splashData.isPositive ? 'bg-pink-400/95' : 'bg-red-300/95'}`}>
           {splashData.isPositive && (
@@ -531,7 +535,7 @@ const App: React.FC = () => {
             
             {splashData.count === 1 && splashData.finalPoints !== undefined && (
                 <div className="flex flex-col items-center bg-pink-50 px-10 py-5 rounded-full shadow-inner border-2 border-pink-200">
-                  <span className="text-pink-400 text-sm font-bold uppercase tracking-widest mb-1">當前最新分數是</span>
+                  <span className="text-pink-400 text-sm font-bold uppercase tracking-widest mb-1">最新分數</span>
                   <span className="text-pink-700 text-5xl font-heading tracking-tighter">{splashData.finalPoints}</span>
                 </div>
             )}
@@ -539,14 +543,14 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Random Picker Animation */}
+      {/* Random Picker Animation - 2.0s with Ticking */}
       {isRolling && rolledStudent && (
         <div className="fixed inset-0 bg-pink-500/95 flex items-center justify-center z-[110] transition-opacity">
           <div className="text-center p-12 bg-white rounded-[60px] shadow-2xl border-8 border-yellow-400 relative animate-in zoom-in-95">
              <div className="absolute top-6 right-10 font-heading text-pink-500 text-2xl">
                 ({drawnIds.size + 1}/{activeClass?.students.length})
              </div>
-            <h2 className="text-4xl font-heading text-pink-600 mb-8 animate-pulse uppercase tracking-widest">WHO WILL BE NEXT?<br/>下一個是誰呢？</h2>
+            <h2 className="text-4xl font-heading text-pink-600 mb-8 animate-pulse uppercase tracking-widest">WHO WILL BE NEXT?</h2>
             <div className="flex flex-col items-center justify-center shake">
               <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${rolledStudent.pokemonId}.png`} alt="picker" className="w-64 h-64 object-contain mb-4 drop-shadow-lg" />
               <div className="text-5xl font-heading text-gray-800 uppercase tracking-tight">{rolledStudent.name}</div>

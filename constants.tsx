@@ -64,9 +64,9 @@ export const INITIAL_CLASSES = [
 
 export const POKEMON_COUNT = 500;
 export const AUDIO_URLS = {
-  WIN: 'https://assets.mixkit.co/active_storage/sfx/2017/2017-preview.mp3', // Pleasant happy chime
-  LOSE: 'https://assets.mixkit.co/active_storage/sfx/256/256-preview.mp3', // Sad downward thud
+  WIN: 'https://assets.mixkit.co/active_storage/sfx/2017/2017-preview.mp3', // Happy clear chime
+  LOSE: 'https://assets.mixkit.co/active_storage/sfx/265/265-preview.mp3', // Disappointed thud
   CLAP: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3', // Strong applause
-  ROLL: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3', // Ticking sound
-  PICK: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3' // Selection applause
+  ROLL: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3', // Ticking "Du-du-du"
+  PICK: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3' // Reuse applause for pick
 };
