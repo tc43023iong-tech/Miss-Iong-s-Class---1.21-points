@@ -58,15 +58,14 @@ export const INITIAL_CLASSES = [
   },
   {
     name: '五乙普通話 / 5B Mandarin',
-    students: ["歐陽卓軒", "陳至濠", "謝穎琳", "鄭智泓", "鄭澳因", "陳靜妍", "陳浩", "聯", "黃羲辰", "郭芷晴", "林安娜", "劉樂澄", "李梓樂", "李天恩", "梁康妮", "梁語翹", "梁智中", "梁賢正", "梁伽藍", "梁凱嵐", "劉一鳴", "盧紫君", "呂建羲", "馬梓倫", "吳子軒", "吳梓浩", "吳穎詩", "彭賢信", "施泓軒", "蕭昊恩", "蘇健羽", "田浩成", "唐敏裕", "黃浩藍"]
+    students: ["歐陽卓軒", "陳至濠", "謝穎琳", "鄭智泓", "鄭澳因", "陳靜妍", "陳浩", "霍菁", "黃羲辰", "郭芷晴", "林安娜", "劉樂澄", "李梓樂", "李天恩", "梁康妮", "梁語翹", "梁智中", "梁賢正", "梁伽藍", "梁凱嵐", "劉一鳴", "盧紫君", "呂建羲", "馬梓倫", "吳子軒", "吳梓浩", "吳穎詩", "彭賢信", "施泓軒", "蕭昊恩", "蘇健羽", "田浩成", "唐敏裕", "黃浩藍"]
   },
 ];
 
 export const POKEMON_COUNT = 500;
 export const AUDIO_URLS = {
-  WIN: 'https://assets.mixkit.co/active_storage/sfx/2017/2017-preview.mp3', // Happy clear chime
-  LOSE: 'https://assets.mixkit.co/active_storage/sfx/265/265-preview.mp3', // Disappointed thud
-  CLAP: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3', // Strong applause
-  ROLL: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3', // Ticking "Du-du-du"
-  PICK: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3' // Reuse applause for pick
+  WIN: 'https://assets.mixkit.co/active_storage/sfx/2017/2017-preview.mp3', // Bright magical chime
+  LOSE: 'https://assets.mixkit.co/active_storage/sfx/256/256-preview.mp3', // Classic downward 'oh' thud
+  ROLL: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3', // High tension rapid clicking
+  PICK: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3' // Fanfare for final pick
 };

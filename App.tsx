@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Student, ClassData, SortType, Action } from './types';
 import { INITIAL_CLASSES, POSITIVE_ACTIONS, NEGATIVE_ACTIONS, POKEMON_COUNT, AUDIO_URLS, SCORING_RULES } from './constants';
 
@@ -18,8 +18,8 @@ const App: React.FC = () => {
   
   const [splashData, setSplashData] = useState<{
     names: string;
-    actionLabel: string;
-    pointsChange: string;
+    action: string;
+    change: number;
     isPositive: boolean;
     pokemonId?: number;
     id?: string;
@@ -31,15 +31,7 @@ const App: React.FC = () => {
   const [rolledStudent, setRolledStudent] = useState<Student | null>(null);
   const [drawnIds, setDrawnIds] = useState<Set<string>>(new Set());
 
-  const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
-
   useEffect(() => {
-    Object.entries(AUDIO_URLS).forEach(([key, url]) => {
-      const audio = new Audio(url);
-      audio.preload = 'auto';
-      audioRefs.current[key] = audio;
-    });
-
     const saved = localStorage.getItem('poke_class_data');
     if (saved) {
       try {
@@ -123,60 +115,40 @@ const App: React.FC = () => {
     saveToLocal(newClasses);
   };
 
-  const unlockAudio = () => {
-    (Object.values(audioRefs.current) as HTMLAudioElement[]).forEach(audio => {
-      audio.play().then(() => {
-        audio.pause();
-        audio.currentTime = 0;
-      }).catch(() => {});
-    });
-  };
-
-  const playSound = (type: keyof typeof AUDIO_URLS) => {
-    const audio = audioRefs.current[type];
-    if (audio) {
-      audio.currentTime = 0;
-      audio.play().catch(e => {
-        console.warn(`Audio ${type} blocked or failed:`, e);
-      });
-    }
+  const playSound = (url: string) => {
+    const audio = new Audio(url);
+    audio.play().catch(e => console.error("Audio play blocked", e));
   };
 
   const handleApplyAction = (action: Action | { points: number, text: string }, isPositive: boolean) => {
-    unlockAudio();
     const idsToUpdate = isMultiSelectMode ? Array.from(selectedIds) : (selectedStudent ? [selectedStudent.id] : []);
     if (idsToUpdate.length === 0) return;
     
-    const changeValue = 'points' in action ? action.points : 0;
-    const actionText = 'textZh' in action ? action.textZh : (action as any).text;
+    const change = 'points' in action ? action.points : 0;
+    const textZh = 'textZh' in action ? action.textZh : (action as any).text;
 
     updateStudents(idsToUpdate, (s) => ({
-      points: s.points + changeValue,
-      plusCount: isPositive ? s.plusCount + Math.max(0, changeValue) : s.plusCount,
-      minusCount: !isPositive ? s.minusCount + Math.abs(changeValue) : s.minusCount
+      points: s.points + change,
+      plusCount: isPositive ? s.plusCount + Math.max(0, change) : s.plusCount,
+      minusCount: !isPositive ? s.minusCount + Math.abs(change) : s.minusCount
     }));
 
     const firstStudent = activeClass?.students.find(s => s.id === idsToUpdate[0]);
     
     setSplashData({
-      names: idsToUpdate.length > 1 ? `${firstStudent?.name} + ${idsToUpdate.length - 1} 位學生` : (firstStudent?.name || ''),
-      pointsChange: `${changeValue >= 0 ? '+' : ''}${changeValue}`,
-      actionLabel: actionText,
+      names: idsToUpdate.length > 1 ? `${firstStudent?.name} + ${idsToUpdate.length - 1} others` : (firstStudent?.name || ''),
+      action: `${change >= 0 ? '+' : ''}${change} ${textZh}`,
+      change: change,
       isPositive: isPositive,
       pokemonId: firstStudent?.pokemonId,
       id: idsToUpdate.length === 1 ? firstStudent?.id : undefined,
       count: idsToUpdate.length,
-      finalPoints: idsToUpdate.length === 1 ? (firstStudent ? firstStudent.points + changeValue : undefined) : undefined
+      finalPoints: idsToUpdate.length === 1 ? (firstStudent ? firstStudent.points + change : undefined) : undefined
     });
 
-    if (idsToUpdate.length > 1 && isPositive) {
-      playSound('CLAP');
-    } else {
-      playSound(isPositive ? 'WIN' : 'LOSE');
-    }
+    playSound(isPositive ? AUDIO_URLS.WIN : AUDIO_URLS.LOSE);
     
-    // Exactly 1.5s splash duration
-    setTimeout(() => setSplashData(null), 1500);
+    setTimeout(() => setSplashData(null), 2500);
     setIsActionModalOpen(false);
     if (isMultiSelectMode) {
       setSelectedIds(new Set());
@@ -203,9 +175,9 @@ const App: React.FC = () => {
         const imported = JSON.parse(ev.target?.result as string);
         saveToLocal(imported);
         if (imported.length > 0) setActiveClassName(imported[0].className);
-        alert('導入成功！');
+        alert('Successfully imported class data!');
       } catch (err) {
-        alert('導入失敗，請確保文件格式正確。');
+        alert('Error parsing file. Please use a valid TXT export.');
       }
     };
     reader.readAsText(file);
@@ -213,37 +185,37 @@ const App: React.FC = () => {
 
   const startRolling = () => {
     if (!activeClass || activeClass.students.length === 0) return;
-    unlockAudio();
-
+    
     const pool = activeClass.students.filter(s => !drawnIds.has(s.id));
     const effectivePool = pool.length > 0 ? pool : activeClass.students;
     
     setIsRolling(true);
     setRolledStudent(null);
 
-    // EXACTLY 2.0 seconds = 2000ms (100ms interval * 20 steps)
+    // EXACTLY 1.5 seconds = 1500ms
+    // 100ms interval * 15 counts = 1500ms
     let count = 0;
-    const maxSteps = 20; 
     const interval = setInterval(() => {
       const random = effectivePool[Math.floor(Math.random() * effectivePool.length)];
       setRolledStudent(random);
-      playSound('ROLL');
+      playSound(AUDIO_URLS.ROLL);
       
       count++;
-      if (count >= maxSteps) {
+      if (count >= 15) {
         clearInterval(interval);
         setTimeout(() => {
           setIsRolling(false);
-          playSound('CLAP'); 
+          playSound(AUDIO_URLS.PICK);
           setDrawnIds(prev => {
             const next = new Set(prev);
             next.add(random.id);
             if (next.size >= activeClass.students.length) return new Set([random.id]); 
             return next;
           });
+          // Immediately show action modal for the picked student
           setSelectedStudent(random);
           setIsActionModalOpen(true);
-        }, 300);
+        }, 500); // Small pause for the "reveal" moment
       }
     }, 100);
   };
@@ -261,7 +233,7 @@ const App: React.FC = () => {
     const input = document.getElementById('manual-points') as HTMLInputElement;
     const val = parseInt(input.value);
     if (!isNaN(val)) {
-      handleApplyAction({ points: val, text: '手動輸入' }, val >= 0);
+      handleApplyAction({ points: val, text: '手動輸入 / MANUAL INPUT' }, val >= 0);
       input.value = '';
     }
   };
@@ -290,12 +262,12 @@ const App: React.FC = () => {
           <div className="flex items-center gap-1">
             <button onClick={startRolling} className="bg-yellow-400 hover:bg-yellow-500 text-white px-6 py-2 rounded-l-full font-bold shadow-md transform hover:scale-105 transition flex items-center gap-2">
               <i className="fas fa-dice"></i> 
-              <span>隨機抽查 ({drawnIds.size}/{activeClass?.students.length})</span>
+              <span>RANDOM PICK / 隨機抽查 ({drawnIds.size}/{activeClass?.students.length})</span>
             </button>
             <button 
               onClick={() => setDrawnIds(new Set())} 
+              title="Reset Pool / 重置"
               className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-r-full font-bold shadow-md transform hover:scale-105 transition"
-              title="重置名單"
             >
               <i className="fas fa-redo"></i>
             </button>
@@ -314,12 +286,12 @@ const App: React.FC = () => {
               className={`${isMultiSelectMode ? 'bg-purple-500' : 'bg-purple-400'} hover:bg-purple-600 text-white px-6 py-2 rounded-full font-bold shadow-md transform hover:scale-105 transition`}
             >
               <i className={`fas ${isMultiSelectMode ? 'fa-check-double' : 'fa-list-ul'} mr-2`}></i>
-              {isMultiSelectMode ? (selectedIds.size > 0 ? `更新 (${selectedIds.size})` : '取消多選') : '批量選擇'}
+              {isMultiSelectMode ? (selectedIds.size > 0 ? `UPDATE / 更新 (${selectedIds.size})` : 'CANCEL / 取消多選') : 'MULTI-SELECT / 多選'}
             </button>
             <button 
               onClick={() => setIsRulesModalOpen(true)}
               className="bg-pink-100 hover:bg-pink-200 text-pink-600 w-10 h-10 rounded-full flex items-center justify-center shadow-sm border-2 border-pink-200 transition"
-              title="評分規則"
+              title="Rules / 加分細則"
             >
               <i className="fas fa-bell"></i>
             </button>
@@ -327,10 +299,10 @@ const App: React.FC = () => {
 
           <div className="flex gap-1">
             <button onClick={handleExport} className="bg-blue-400 hover:bg-blue-500 text-white px-6 py-2 rounded-full font-bold shadow-md transform hover:scale-105 transition">
-              <i className="fas fa-download mr-2"></i> 導出
+              <i className="fas fa-download mr-2"></i> EXPORT / 導出
             </button>
             <label className="bg-green-400 hover:bg-green-500 text-white px-6 py-2 rounded-full font-bold shadow-md transform hover:scale-105 transition cursor-pointer">
-              <i className="fas fa-upload mr-2"></i> 導入
+              <i className="fas fa-upload mr-2"></i> IMPORT / 導入
               <input type="file" className="hidden" accept=".txt" onChange={handleImport} />
             </label>
           </div>
@@ -340,20 +312,20 @@ const App: React.FC = () => {
       <main className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 bg-white/70 p-4 rounded-xl backdrop-blur-sm border-2 border-pink-100 shadow-sm gap-4">
           <div className="flex flex-wrap gap-2 items-center text-gray-700">
-            <i className="fas fa-sort mr-1 text-pink-400"></i> 排序:
-            <button onClick={() => setSortType(SortType.ID)} className={`px-3 py-1 rounded-lg text-sm font-bold transition ${sortType === SortType.ID ? 'bg-pink-400 text-white' : 'bg-pink-50 text-pink-600'}`}>學號</button>
-            <button onClick={() => setSortType(SortType.SCORE_DESC)} className={`px-3 py-1 rounded-lg text-sm font-bold transition ${sortType === SortType.SCORE_DESC ? 'bg-pink-400 text-white' : 'bg-pink-50 text-pink-600'}`}>高到低</button>
-            <button onClick={() => setSortType(SortType.SCORE_ASC)} className={`px-3 py-1 rounded-lg text-sm font-bold transition ${sortType === SortType.SCORE_ASC ? 'bg-pink-400 text-white' : 'bg-pink-50 text-pink-600'}`}>低到高</button>
-            <button onClick={() => setSortType(SortType.NAME)} className={`px-3 py-1 rounded-lg text-sm font-bold transition ${sortType === SortType.NAME ? 'bg-pink-400 text-white' : 'bg-pink-50 text-pink-600'}`}>姓名</button>
+            <i className="fas fa-sort mr-1 text-pink-400"></i> SORT BY / 排序:
+            <button onClick={() => setSortType(SortType.ID)} className={`px-3 py-1 rounded-lg text-sm font-bold transition ${sortType === SortType.ID ? 'bg-pink-400 text-white' : 'bg-pink-50'}`}>ID / 學號</button>
+            <button onClick={() => setSortType(SortType.SCORE_DESC)} className={`px-3 py-1 rounded-lg text-sm font-bold transition ${sortType === SortType.SCORE_DESC ? 'bg-pink-400 text-white' : 'bg-pink-50'}`}>HI-LO / 高到低</button>
+            <button onClick={() => setSortType(SortType.SCORE_ASC)} className={`px-3 py-1 rounded-lg text-sm font-bold transition ${sortType === SortType.SCORE_ASC ? 'bg-pink-400 text-white' : 'bg-pink-50'}`}>LO-HI / 低到高</button>
+            <button onClick={() => setSortType(SortType.NAME)} className={`px-3 py-1 rounded-lg text-sm font-bold transition ${sortType === SortType.NAME ? 'bg-pink-400 text-white' : 'bg-pink-50'}`}>NAME / 姓名</button>
           </div>
           <div className="flex items-center gap-4">
             {isMultiSelectMode && (
               <button onClick={toggleSelectAll} className="bg-purple-100 text-purple-700 px-4 py-1 rounded-full text-sm font-bold border border-purple-200 hover:bg-purple-200 transition">
-                {selectedIds.size === activeClass?.students.length ? '取消全選' : '全選'}
+                {selectedIds.size === activeClass?.students.length ? 'DESELECT ALL / 取消全選' : 'SELECT ALL / 全選'}
               </button>
             )}
             <div className="text-gray-500 text-sm font-bold uppercase">
-              學生人數: {activeClass?.students.length || 0}
+              STUDENTS / 學生總數: {activeClass?.students.length || 0}
             </div>
           </div>
         </div>
@@ -406,56 +378,50 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Action Modal - Tightened layout */}
+      {/* Action Modal */}
       {isActionModalOpen && (selectedStudent || isMultiSelectMode) && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-4xl rounded-[40px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 candy-gradient flex flex-col md:flex-row items-center gap-4 relative">
-              <button onClick={() => setIsActionModalOpen(false)} className="absolute top-4 right-6 text-pink-600 text-2xl hover:scale-110 transition"><i className="fas fa-times"></i></button>
+            <div className="p-8 candy-gradient flex flex-col md:flex-row items-center gap-6 relative">
+              <button onClick={() => setIsActionModalOpen(false)} className="absolute top-6 right-6 text-pink-600 text-2xl hover:scale-110 transition"><i className="fas fa-times"></i></button>
               {isMultiSelectMode ? (
-                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center border-4 border-purple-400 shadow-md">
-                   <i className="fas fa-users text-purple-400 text-3xl"></i>
+                <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center border-4 border-purple-400 shadow-md">
+                   <i className="fas fa-users text-purple-400 text-5xl"></i>
                 </div>
               ) : (
-                <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${selectedStudent?.pokemonId}.png`} alt="pk" className="w-20 h-20 bg-white rounded-full p-2 border-4 border-pink-400 shadow-md" />
+                <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${selectedStudent?.pokemonId}.png`} alt="pk" className="w-32 h-32 bg-white rounded-full p-2 border-4 border-pink-400 shadow-md" />
               )}
               <div className="text-center md:text-left flex-1">
-                <h2 className="text-2xl font-heading text-pink-700 uppercase leading-tight">{isMultiSelectMode ? `批量更新 (${selectedIds.size})` : selectedStudent?.name}</h2>
-                {!isMultiSelectMode && <p className="text-pink-600 font-bold text-sm">學號: #{selectedStudent?.id} • 當前分數: {selectedStudent?.points}</p>}
-                <div className="mt-2 flex items-center gap-2 bg-white/50 p-2 rounded-xl border border-pink-200">
-                  <label className="font-bold text-pink-700 text-xs whitespace-nowrap uppercase">手動輸入:</label>
+                <h2 className="text-3xl font-heading text-pink-700 uppercase">{isMultiSelectMode ? `BULK UPDATE / 批量更新 (${selectedIds.size})` : selectedStudent?.name}</h2>
+                {!isMultiSelectMode && <p className="text-pink-600 font-bold text-lg">ID / 學號: #{selectedStudent?.id} • SCORE / 分數: {selectedStudent?.points}</p>}
+                <div className="mt-4 flex items-center gap-3 bg-white/50 p-3 rounded-2xl border-2 border-pink-200">
+                  <label className="font-bold text-pink-700 text-sm whitespace-nowrap uppercase">MANUAL / 手動:</label>
                   <input 
                     id="manual-points" 
                     type="number" 
-                    placeholder="..." 
+                    placeholder="Points / 分數..." 
                     onKeyDown={(e) => { if (e.key === 'Enter') handleManualApply(); }}
-                    className="w-20 bg-white px-2 py-1 rounded border border-pink-300 focus:outline-none focus:ring-1 focus:ring-pink-400 text-sm" 
+                    className="w-full bg-white px-3 py-1 rounded-lg border-2 border-pink-300 focus:outline-none focus:ring-2 focus:ring-pink-400" 
                   />
-                  <button onClick={handleManualApply} className="bg-pink-500 text-white px-3 py-1 rounded font-bold hover:bg-pink-600 transition uppercase text-xs">應用</button>
+                  <button onClick={handleManualApply} className="bg-pink-500 text-white px-4 py-1 rounded-lg font-bold hover:bg-pink-600 transition uppercase">APPLY / 應用</button>
                 </div>
               </div>
             </div>
-            <div className="grid md:grid-cols-2 gap-4 p-6 max-h-[70vh] overflow-y-auto">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-green-600 font-heading text-lg mb-2 border-b-2 border-green-100 pb-1 uppercase">⭐ 加分</div>
+            <div className="grid md:grid-cols-2 gap-8 p-8 max-h-[60vh] overflow-y-auto">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-green-600 font-heading text-xl mb-4 border-b-4 border-green-100 pb-2 uppercase">⭐ POSITIVE / 加分</div>
                 {POSITIVE_ACTIONS.map((act, idx) => (
-                  <button key={idx} onClick={() => handleApplyAction(act, true)} className="w-full group bg-green-50 hover:bg-green-500 hover:text-white p-3 rounded-xl transition-all text-left flex items-center justify-between border border-transparent hover:border-green-300 shadow-sm">
-                    <div className="flex flex-col">
-                      <div className="font-bold text-gray-800 group-hover:text-white text-sm">{act.textZh}</div>
-                      <div className="text-[10px] text-gray-500 group-hover:text-green-100">{act.textEn}</div>
-                    </div>
+                  <button key={idx} onClick={() => handleApplyAction(act, true)} className="w-full group bg-green-50 hover:bg-green-500 hover:text-white p-4 rounded-2xl transition-all text-left flex items-center justify-between border-2 border-transparent hover:border-green-300 shadow-sm">
+                    <div><div className="font-bold text-gray-800 group-hover:text-white">{act.textZh}</div><div className="text-xs text-gray-500 group-hover:text-green-100">{act.textEn}</div></div>
                     <span className="font-heading text-lg text-green-500 group-hover:text-white">+{act.points}</span>
                   </button>
                 ))}
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-red-600 font-heading text-lg mb-2 border-b-2 border-red-100 pb-1 uppercase">⚠️ 減分</div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-red-600 font-heading text-xl mb-4 border-b-4 border-red-100 pb-2 uppercase">⚠️ NEGATIVE / 減分</div>
                 {NEGATIVE_ACTIONS.map((act, idx) => (
-                  <button key={idx} onClick={() => handleApplyAction(act, false)} className="w-full group bg-red-50 hover:bg-red-500 hover:text-white p-3 rounded-xl transition-all text-left flex items-center justify-between border border-transparent hover:border-red-300 shadow-sm">
-                    <div className="flex flex-col">
-                      <div className="font-bold text-gray-800 group-hover:text-white text-sm">{act.textZh}</div>
-                      <div className="text-[10px] text-gray-400 group-hover:text-red-100">{act.textEn}</div>
-                    </div>
+                  <button key={idx} onClick={() => handleApplyAction(act, false)} className="w-full group bg-red-50 hover:bg-red-500 hover:text-white p-4 rounded-2xl transition-all text-left flex items-center justify-between border-2 border-transparent hover:border-red-300 shadow-sm">
+                    <div><div className="font-bold text-gray-800 group-hover:text-white">{act.textZh}</div><div className="text-xs text-gray-500 group-hover:text-green-100">{act.textEn}</div></div>
                     <span className="font-heading text-lg text-red-500 group-hover:text-white">{act.points}</span>
                   </button>
                 ))}
@@ -472,7 +438,7 @@ const App: React.FC = () => {
             <button onClick={() => setIsRulesModalOpen(false)} className="absolute top-6 right-6 text-pink-600 text-2xl hover:scale-110 z-10"><i className="fas fa-times"></i></button>
             <div className="p-8 candy-gradient border-b-4 border-pink-200 text-center">
               <h2 className="text-3xl font-heading text-pink-700">默書/測驗/考試 加分細則</h2>
-              <p className="text-pink-600 font-bold uppercase text-xs mt-1">Dictation / Test / Exam Rules</p>
+              <p className="text-pink-600 font-bold uppercase text-xs mt-1">Dictation / Test / Exam Scoring Rules</p>
             </div>
             <div className="p-8 space-y-4">
               {SCORING_RULES.map((rule, idx) => (
@@ -489,9 +455,37 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Splash Animation - 1.5s as requested */}
+      {/* Pokemon Selector Modal */}
+      {isPokemonModalOpen && selectedStudent && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[60] p-4">
+          <div className="bg-white w-full max-w-5xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col h-[90vh]">
+            <div className="p-8 candy-gradient flex justify-between items-center border-b-4 border-pink-200 relative">
+              <div>
+                <h2 className="text-3xl font-heading text-pink-700 uppercase">Choose Pokemon / 選擇寶可夢</h2>
+                <p className="text-pink-600 font-bold uppercase text-sm">Target: #{selectedStudent.id} {selectedStudent.name}</p>
+              </div>
+              <button onClick={() => setIsPokemonModalOpen(false)} className="text-pink-600 text-2xl hover:scale-110 transition"><i className="fas fa-times"></i></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-8 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 bg-pink-50">
+              {Array.from({ length: POKEMON_COUNT }).map((_, i) => (
+                <button 
+                  key={i} 
+                  onClick={() => { updateStudents([selectedStudent.id], { pokemonId: i + 1 }); setIsPokemonModalOpen(false); }} 
+                  className={`p-2 bg-white rounded-2xl border-2 transition-all hover:scale-110 hover:shadow-lg flex flex-col items-center gap-1 ${selectedStudent.pokemonId === i + 1 ? 'border-pink-500 shadow-inner ring-4 ring-pink-100' : 'border-transparent'}`}
+                >
+                  <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${i + 1}.png`} alt={`pk-${i+1}`} className="w-full h-auto" />
+                  <span className="text-[10px] font-bold text-gray-400">#{i + 1}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Splash Animation */}
       {splashData && (
         <div className={`fixed inset-0 flex items-center justify-center z-[120] animate-in fade-in duration-300 ${splashData.isPositive ? 'bg-pink-400/95' : 'bg-red-300/95'}`}>
+          {/* Internal Fireworks for Positive Splash */}
           {splashData.isPositive && (
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
                 <div className="firework" style={{ left: '15%', top: '25%', color: '#fff', animationDelay: '0s' }}></div>
@@ -510,20 +504,19 @@ const App: React.FC = () => {
               )}
             </h1>
             
-            <div className="text-4xl font-bold text-gray-800 mb-2 uppercase tracking-tight">
+            <div className="text-3xl font-bold text-gray-800 mb-2 uppercase">
                 {splashData.id ? `#${splashData.id} ` : ''}{splashData.names}
             </div>
             
-            <div className={`text-3xl font-bold mb-6 uppercase flex items-center gap-3 ${splashData.isPositive ? 'text-green-500' : 'text-red-500'}`}>
-                <span className="bg-current text-white px-3 py-1 rounded-xl">{splashData.pointsChange}</span>
-                <span>{splashData.actionLabel}</span>
+            <div className={`text-2xl font-bold mb-4 uppercase ${splashData.isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                {splashData.action}
             </div>
 
             <div className="relative mb-8">
               {splashData.pokemonId ? (
-                <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${splashData.pokemonId}.png`} alt="pk" className="w-56 h-56 drop-shadow-xl animate-bounce" />
+                <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${splashData.pokemonId}.png`} alt="pk" className="w-48 h-48 drop-shadow-xl animate-bounce" />
               ) : (
-                <div className="w-56 h-56 bg-pink-50 rounded-full flex items-center justify-center shadow-inner"><i className="fas fa-users text-pink-300 text-6xl"></i></div>
+                <div className="w-48 h-48 bg-pink-50 rounded-full flex items-center justify-center shadow-inner"><i className="fas fa-users text-pink-300 text-6xl"></i></div>
               )}
               {splashData.isPositive && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -534,27 +527,32 @@ const App: React.FC = () => {
             </div>
             
             {splashData.count === 1 && splashData.finalPoints !== undefined && (
-                <div className="flex flex-col items-center bg-pink-50 px-10 py-5 rounded-full shadow-inner border-2 border-pink-200">
-                  <span className="text-pink-400 text-sm font-bold uppercase tracking-widest mb-1">最新分數</span>
-                  <span className="text-pink-700 text-5xl font-heading tracking-tighter">{splashData.finalPoints}</span>
+                <div className="flex flex-col items-center bg-pink-50 px-10 py-4 rounded-full shadow-inner border-2 border-pink-200">
+                  <span className="text-pink-400 text-sm font-bold uppercase tracking-widest">Latest Score / 最新分數</span>
+                  <span className="text-pink-700 text-4xl font-heading">{splashData.finalPoints}</span>
+                </div>
+            )}
+            {splashData.count > 1 && (
+                <div className="bg-purple-100 px-10 py-4 rounded-full text-purple-700 text-xl font-bold shadow-inner uppercase">
+                   Updated {splashData.count} students!
                 </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Random Picker Animation - 2.0s with Ticking */}
+      {/* Random Picker Animation */}
       {isRolling && rolledStudent && (
         <div className="fixed inset-0 bg-pink-500/95 flex items-center justify-center z-[110] transition-opacity">
-          <div className="text-center p-12 bg-white rounded-[60px] shadow-2xl border-8 border-yellow-400 relative animate-in zoom-in-95">
+          <div className="text-center p-12 bg-white rounded-[60px] shadow-2xl border-8 border-yellow-400 relative">
              <div className="absolute top-6 right-10 font-heading text-pink-500 text-2xl">
                 ({drawnIds.size + 1}/{activeClass?.students.length})
              </div>
-            <h2 className="text-4xl font-heading text-pink-600 mb-8 animate-pulse uppercase tracking-widest">WHO WILL BE NEXT?</h2>
+            <h2 className="text-4xl font-heading text-pink-600 mb-8 animate-pulse uppercase tracking-widest">WHO WILL BE NEXT?<br/>下一個是誰呢？</h2>
             <div className="flex flex-col items-center justify-center shake">
               <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${rolledStudent.pokemonId}.png`} alt="picker" className="w-64 h-64 object-contain mb-4 drop-shadow-lg" />
               <div className="text-5xl font-heading text-gray-800 uppercase tracking-tight">{rolledStudent.name}</div>
-              <div className="text-pink-400 font-bold mt-2 text-xl">學號: #{rolledStudent.id}</div>
+              <div className="text-pink-400 font-bold mt-2">ID: #{rolledStudent.id}</div>
             </div>
           </div>
         </div>
